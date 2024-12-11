@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../api";
 import Prediction from "../components/Prediction";
-import "../styles/Home.css";
+import "../styles/Account.css";
 import { all } from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -12,7 +12,7 @@ function Account() {
     useEffect(() => {
         getUserInfo();
     }, []);
-
+    
     const getUserInfo = () => {
         api
           .get("/api/user-info/")
@@ -30,13 +30,15 @@ function Account() {
             <h2>Account Info</h2>
             <label htmlFor="title">Name:</label>
             <br />
-            <input
-            type="text"
-            id="name"
-            name="name"
-            onChange={(e) => setName(e.target.value)}
-            value={name}
-            />
+            <p>{user.first_name} {user.last_name}</p>
+            <br />
+            <label htmlFor="title">User Name:</label>
+            <br />
+            <p>{user.username}</p>
+            <br />
+            <label htmlFor="title">Email:</label>
+            <br />
+            <p>{user.email}</p>
         </div>
     );
 }
