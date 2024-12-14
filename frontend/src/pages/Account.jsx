@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
 import api from "../api";
-import Prediction from "../components/Prediction";
 import "../styles/Account.css";
-import { all } from "axios";
-import { useNavigate } from "react-router-dom";
 
 function Account() {
     const [user, setUser] = useState("");
-    const [name, setName] = useState("");
 
     useEffect(() => {
         getUserInfo();

@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User
+from django.http import JsonResponse
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -22,6 +23,10 @@ def user_info(request):
             "detail":
             "Authentication credentials were not provided."
         }, status=401)
+    
+def get_nfl_team_stats(request):
+    stats = NFLTeamStats.objects.all().values()
+    return JsonResponse(list(stats), safe=False)
     
 # Create your views here.
 class CreateUserView(generics.CreateAPIView):
@@ -63,7 +68,3 @@ class PredictionDelete(generics.DestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         return Prediction.objects.filter(author=user)
-    
-class NFLTeamStatsListView(generics.ListAPIView):
-    queryset = NFLTeamStats.objects.all()
-    serializer_class = NFLTeamStatsSerializer

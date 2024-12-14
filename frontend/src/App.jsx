@@ -7,7 +7,8 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UserPredictions from "./pages/UserPredictions";
 import Account from "./pages/Account";
-import "./styles/App.css"
+import NFLStatsChart from "./pages/NFLStatsChart";
+import "./styles/App.css";
 
 function Logout() {
   localStorage.clear();
@@ -22,14 +23,27 @@ function RegisterAndLogout() {
 function App() {
   return (
     <BrowserRouter>
-    <nav>
-      <ul>
-        <li><Link to="/">Home</Link></li>
-        <li><Link to="/account">Account</Link></li>
-        <li><Link to="/account/predictions">My Predictions</Link></li>
-        <li><Link className="logout" to="/login" onClick={localStorage.clear()}>Logout</Link></li>
-      </ul>
-    </nav>
+      <nav>
+        <ul>
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          <li>
+            <Link to="/account">Account</Link>
+          </li>
+          <li>
+            <Link to="/account/predictions">My Predictions</Link>
+          </li>
+          <li>
+            <Link to="/nfl-team-stats">NFL Team Stats</Link>
+          </li>
+          <li>
+            <Link className="logout" to="/login" onClick={localStorage.clear()}>
+              Logout
+            </Link>
+          </li>
+        </ul>
+      </nav>
       <Routes>
         <Route
           path="/"
@@ -39,6 +53,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/nfl-team-stats" element={<NFLStatsChart />} />
         <Route
           path="/account/predictions"
           element={
@@ -48,12 +63,12 @@ function App() {
           }
         />
         <Route
-        path="/account"
-        element={
-          <ProtectedRoute>
-            <Account />
-          </ProtectedRoute>
-        }
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Account />
+            </ProtectedRoute>
+          }
         />
         <Route path="/login" element={<Login />} />
         <Route path="/logout" element={<Logout />} />
