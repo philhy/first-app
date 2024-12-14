@@ -8,15 +8,17 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-# Set up Django environment
+print('Getting environment details')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 django.setup()
 
 from stats.models import NFLTeamStats
 
+
 def importData(data, years):
     date_range = range(years[0], years[1]+1)
-
+    
+    print(f'Getting {data} data')
     def getData(i, data=data):
         if 'pbp' in data:
             imported_data = nfl.import_pbp_data([i])
@@ -24,12 +26,14 @@ def importData(data, years):
     
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(getData, date_range))
-
+    
+    print('Creating DataFrame')
     data_df = pd.concat(results)
 
     return data_df
 
 def sumData(df, i=['run', 'pass']):
+    print('Summing data')
     data_dict = {
         'yards_gained': 'sum',
         'shotgun': 'sum',
@@ -52,7 +56,7 @@ def sumData(df, i=['run', 'pass']):
     if isinstance(i, str):
         new_df = df[df.play_type == i].groupby(['posteam', 'season', 'week', 'play_type']).agg(data_dict).unstack(fill_value=0).reset_index()
         new_df.columns = [i[0] for i in new_df.columns]
-        new_df = new_df.rename(columns={'posteam': 'team', 'fumble_lost': f'{i}_fumble_lost', 'fumble': f'{i}_fumble', 'touchdown': f'{i}_touchdown'})
+        new_df = new_df.rename(columns={'posteam': 'team', 'fumble_lost': f'{i}_fumble_lost', 'fumble': f'{i}_fumble', 'touchdown': f'{i}_td'})
     else:
         new_df = df[df.play_type.isin(i)].groupby(['posteam', 'season', 'week']).agg(data_dict).reset_index()
 
@@ -65,19 +69,74 @@ def winLossTotal(row, i):
     cols = [f'{i}_wins', f'{i}_losses', f'{i}_ties']
     return pd.Series([wins, losses, ties], index=cols)
 
+def inputTeamData(df):
+    print('Adding data to model')
+    data = []
+    for i in range(len(df)):
+        data.append(NFLTeamStats(
+            team=df.team.iat[i],
+            season=df.season.iat[i],
+            week=df.week.iat[i],
+            total_snaps=df.total_snaps.iat[i],
+            yards_gained=df.yards_gained.iat[i],
+            touchdown=df.touchdown.iat[i],
+            extra_point_attempt=df.extra_point_attempt.iat[i],
+            field_goal_attempt=df.field_goal_attempt.iat[i],
+            total_points=df.total_points.iat[i],
+            td_points=df.td_points.iat[i],
+            xp_points=df.xp_points.iat[i],
+            fg_points=df.fg_points.iat[i],
+            fumble=df.fumble.iat[i],
+            fumble_lost=df.fumble_lost.iat[i],
+            shotgun=df.shotgun.iat[i],
+            no_huddle=df.no_huddle.iat[i],
+            qb_dropback=df.qb_dropback.iat[i],
+            pass_snaps_count=df.pass_snaps_count.iat[i],
+            pass_snaps_pct=df.pass_snaps_pct.iat[i],
+            pass_attempts=df.pass_attempts.iat[i],
+            complete_pass=df.complete_pass.iat[i],
+            incomplete_pass=df.incomplete_pass.iat[i],
+            air_yards=df.air_yards.iat[i],
+            passing_yards=df.passing_yards.iat[i],
+            pass_td=df.pass_td.iat[i],
+            interception=df.interception.iat[i],
+            targets=df.targets.iat[i],
+            receptions=df.receptions.iat[i],
+            receiving_yards=df.receiving_yards.iat[i],
+            yards_after_catch=df.yards_after_catch.iat[i],
+            receiving_td=df.receiving_td.iat[i],
+            pass_fumble=df.pass_fumble.iat[i],
+            pass_fumble_lost=df.pass_fumble_lost.iat[i],
+            rush_snaps_count=df.rush_snaps_count.iat[i],
+            rush_snaps_pct=df.rush_snaps_pct.iat[i],
+            qb_scramble=df.qb_scramble.iat[i],
+            rushing_yards=df.rushing_yards.iat[i],
+            run_td=df.run_td.iat[i],
+            run_fumble=df.run_fumble.iat[i],
+            run_fumble_lost=df.run_fumble_lost.iat[i],
+            wins=df.wins.iat[i],
+            losses=df.losses.iat[i],
+            ties=df.ties.iat[i],
+            win_pct=df.win_pct.iat[i],
+            yps=df.yps.iat[i]
+        ))
+
+    return data
+
 pbp = importData('pbp', [2012, 2023])
 
 pbp = pbp[pbp.season_type == 'REG']
 
 pbp_filtered = pbp[pbp.play_type.isin(['pass', 'run'])].sort_values(by=['season'])
 
+print('Getting team data')
 team_data = pbp_filtered.groupby(['posteam', 'season', 'week', 'play_type']).size().unstack(fill_value=0).reset_index()
 
 team_data['total_snaps'] = team_data['pass'] + team_data['run']
 team_data = team_data.rename(columns={
     'posteam': 'team',
     'pass': 'pass_snaps_count',
-    'run': 'run_snaps_count'
+    'run': 'rush_snaps_count'
 })
 
 team_data['pass_snaps_pct'] = round(team_data.pass_snaps_count / team_data.total_snaps, 2)
@@ -119,11 +178,14 @@ sum_data = pbp[pbp.play_type.isin(['run', 'pass'])][[
      'passer'
 ]]
 
+print('Getting rushing stats')
 rushing_stats = sumData(sum_data, 'run')
 
+print('Getting passing stats')
 passing_stats = sumData(sum_data, 'pass')
 passing_stats['receiving_td'] = passing_stats.pass_td
 
+print('Getting team stats')
 team_stats = sumData(sum_data)
 team_stats['pass_attempts'] = team_stats.incomplete_pass + team_stats.complete_pass
 team_stats = team_stats.rename(columns={'posteam': 'team'})
@@ -131,7 +193,8 @@ team_stats = pd.merge(team_stats, rushing_stats[['team', 'season', 'week', 'run_
 team_stats = pd.merge(team_stats, passing_stats[['team', 'season', 'week', 'pass_fumble_lost', 'pass_fumble', 'pass_td', 'receiving_td']], on=['team', 'season', 'week'])
 team_stats['yards_gained'] = team_stats.yards_gained + team_stats.receiving_yards
 
-points = pbp[(pbp.touchdown == 1) | ((pbp.extra_point_attempt) & (pbp.success == 1)) | ((pbp.field_goal_attempt == 1) & (pbp.success == 1))]
+print('Getting points stats')
+points = pbp[(pbp.touchdown == 1) | ((pbp.extra_point_attempt == 1) & (pbp.success == 1)) | ((pbp.field_goal_attempt == 1) & (pbp.success == 1))]
 points = points.groupby(['posteam', 'season', 'week']).agg({
     'touchdown': 'sum',
     'extra_point_attempt': 'sum',
@@ -143,7 +206,8 @@ points.loc[:, 'fg_points'] = points.apply(lambda row: row['field_goal_attempt'] 
 points['total_points'] = points['td_points'] + points['xp_points'] + points['fg_points']
 points = points.rename(columns={'posteam': 'team'})
 
-pbp.loc[:, 'winner'] = pdp.apply(lambda row: 'TIE' if row['total_home_score'] == row['total_away_score'] else row['home_team'] if row['total_home_score'] > row['total_away_score'] else row['away_team'], axis=1)
+print('Getting win-loss stats')
+pbp.loc[:, 'winner'] = pbp.apply(lambda row: 'TIE' if row['total_home_score'] == row['total_away_score'] else row['home_team'] if row['total_home_score'] > row['total_away_score'] else row['away_team'], axis=1)
 pbp.loc[pbp.play_type_nfl != 'END_GAME', 'winner'] = np.nan
 pbp.winner = pbp.winner.fillna(method='bfill')
 games = pbp.drop_duplicates(subset='game_id')
@@ -151,7 +215,7 @@ games = pbp.drop_duplicates(subset='game_id')
 away_wins = games.groupby(['away_team', 'season', 'week']).apply(winLossTotal, 'away').reset_index()
 away_wins = away_wins.rename(columns={'away_team': 'team'})
 home_wins = games.groupby(['home_team', 'season', 'week']).apply(winLossTotal, 'home').reset_index()
-home_wins = home_wins.rename(columlns={'home_team': 'team'})
+home_wins = home_wins.rename(columns={'home_team': 'team'})
 wins = pd.concat([home_wins, away_wins]).sort_values(by=['team', 'season', 'week']).fillna(0)
 
 for i in ['wins', 'losses', 'ties']:
@@ -164,6 +228,7 @@ for i in ['wins', 'losses', 'ties']:
 wins.loc[:, 'record'] = wins.apply(lambda row: f"{int(row['wins'])}-{int(row['losses'])}-{int(row['ties'])}", axis=1)
 wins.loc[:, 'win_pct'] = wins.apply(lambda row: round(row['wins'] / (row['wins']+row['losses']+row['ties']), 3), axis=1)
 
+print('Combining DataFrames')
 comb_df = pd.merge(team_data, points, on=['team', 'season', 'week'])
 comb_df = pd.merge(comb_df, team_stats, on=['team', 'season', 'week'])
 comb_df = pd.merge(comb_df, wins[[
@@ -183,27 +248,10 @@ comb_df = comb_df[[
 comb_df.drop_duplicates(inplace=True)
 comb_df['yps'] = round(comb_df.yards_gained / comb_df.total_snaps, 2)
 
-def inputTeamData(df):
-    data = []
-    for i in range(len(df)):
-        data.append(NFLTeamStats(
-            team=df.team.iat[i],
-            season=df.season.iat[i],
-            week=df.week.iat[i],
-            total_snaps=df.total_snaps.iat[i],
-            yards_gained=df.yards_gained.iat[i],
-            touchdown=df.touchdown.iat[i],
-            extra_point_attempt=df.extra_point_attempt.iat[i],
-            field_goal_attempt=df.field_goal_attempt.iat[i],
-            total_points=df.total_points.iat[i],
-            td_points=df.td_points.iat[i],
-            xp_points=df.xp_points.iat[i],
-            fg_points=df.fg_points.iat[i],
-            fumble=df.fumble.iat[i],
-            fumble_lost=df.fumble_lost.iat[i],
-            shotgun=df.shotgun.iat[i],
-            team=df.team.iat[i],
-        ))
+data = inputTeamData(comb_df)
+NFLTeamStats.objects.bulk_create(data)
+
+print(f"Successfully inserted {len(comb_df)} random records into the NFLTeamStats model!")
 
 # # Teams list for random selection
 # teams = [

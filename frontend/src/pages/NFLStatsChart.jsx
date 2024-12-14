@@ -29,8 +29,10 @@ ChartJS.register(
 const NFLStatsChart = () => {
   const [teamStats, setTeamStats] = useState([]);
   const [chartData, setChartData] = useState({});
-  const [selectedTeams, setSelectedTeams] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState("");
+  const [selectedTeams, setSelectedTeams] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedWeek, setSelectedWeek] = useState("");
+  const [selectedSeason, setSelectedSeason] = useState("");
 
   useEffect(() => {
     fetchNFLData();
@@ -48,12 +50,14 @@ const NFLStatsChart = () => {
       });
   };
 
-  const handleTeamChange = (e) => {
-    const { options } = e.target;
-    const selected = Array.from(options)
-      .filter((option) => option.selected)
-      .map((option) => option.value);
-    setSelectedTeams(selected);
+  const handleTeamChange = (event) => {
+    const { selectedOptions } = event.target;
+
+    const selectedValues = Array.from(
+      selectedOptions,
+      (option) => option.value
+    );
+    setSelectedTeams([...new Set(selectedValues)]);
   };
 
   const handleCategoryChange = (e) => {
@@ -65,20 +69,23 @@ const NFLStatsChart = () => {
   };
 
   const prepareChartData = () => {
-    const filteredData = teamStats.filter((item) =>
-      selectedTeams.includes(item.team)
+    const filteredData = teamStats.filter(
+      (item) =>
+        selectedTeams.includes(item.team) &&
+        item.week === Number(selectedWeek) &&
+        item.season === Number(selectedSeason)
     );
 
     const labels = filteredData.map((item) => item.team);
 
     const colorPalette = [
-        "rgb(75, 192, 192)",
-        "rgb(255, 99, 132)",
-        "rgb(153, 102, 255)",
-        "rgb(255, 159, 64)",
-        "rgb(54, 162, 235)",
-        "rgb(255, 205, 86)",
-      ];
+      "rgb(75, 192, 192)",
+      "rgb(255, 99, 132)",
+      "rgb(153, 102, 255)",
+      "rgb(255, 159, 64)",
+      "rgb(54, 162, 235)",
+      "rgb(255, 205, 86)",
+    ];
 
     const datasets = selectedCategories.map((category, index) => ({
       label: category.replace("_", " ").toUpperCase(),
@@ -101,12 +108,44 @@ const NFLStatsChart = () => {
     }
   }, [selectedTeams, selectedCategories]);
 
-  const excludeKeys = ["team", "id", "season", "week", "record"]
+  const weeks = [...new Set(teamStats.map((item) => item.week))];
+  const seasons = [...new Set(teamStats.map((item) => item.season))];
+  const uniqueTeams = [...new Set(teamStats.map((item) => item.team))];
+
+  const excludeKeys = ["team", "id", "season", "week", "record"];
 
   return (
     <div>
       <h2>NFL Team Stats</h2>
       <div>
+        <label>Selected Season: </label>
+        <br />
+        <select
+          value={selectedSeason}
+          onChange={(e) => setSelectedSeason(e.target.value)}
+          style={{ width: "200px", height: "20px" }}
+        >
+          {seasons.map((season) => (
+            <option key={season} value={season}>
+              {season}
+            </option>
+          ))}
+        </select>
+        <br />
+        <label>Selected Week: </label>
+        <br />
+        <select
+          value={selectedWeek}
+          onChange={(e) => setSelectedWeek(e.target.value)}
+          style={{ width: "200px", height: "20px" }}
+        >
+          {weeks.map((week) => (
+            <option key={week} value={week}>
+              {week}
+            </option>
+          ))}
+        </select>
+        <br />
         <label>Selected Team: </label>
         <br />
         <select
@@ -115,9 +154,9 @@ const NFLStatsChart = () => {
           onChange={handleTeamChange}
           style={{ width: "200px", height: "100px" }}
         >
-          {teamStats.map((team) => (
-            <option key={team.team} value={team.team}>
-              {team.team}
+          {uniqueTeams.map((team) => (
+            <option key={team} value={team}>
+              {team}
             </option>
           ))}
         </select>
