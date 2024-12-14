@@ -20,8 +20,3 @@ class PredictionSerializer(serializers.ModelSerializer):
         model = Prediction
         fields = ['id', 'title', 'category', 'content', 'created_at', 'author', 'author_username']
         extra_kwargs = {'author': {'read_only': True}}
-
-class NFLTeamStatsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = NFLTeamStats
-        fields = '__all__'

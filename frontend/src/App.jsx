@@ -1,5 +1,5 @@
-import react from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import React from "react";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -21,29 +21,39 @@ function RegisterAndLogout() {
 }
 
 function App() {
+  const location = useLocation();
+
+  const hideNavRoutes = ["/login", "/register"];
+
   return (
-    <BrowserRouter>
-      <nav>
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/account">Account</Link>
-          </li>
-          <li>
-            <Link to="/account/predictions">My Predictions</Link>
-          </li>
-          <li>
-            <Link to="/nfl-team-stats">NFL Team Stats</Link>
-          </li>
-          <li>
-            <Link className="logout" to="/login" onClick={localStorage.clear()}>
-              Logout
-            </Link>
-          </li>
-        </ul>
-      </nav>
+    <>
+      {!hideNavRoutes.includes(location.pathname) && (
+        <nav>
+          <ul>
+            <li>
+              <Link to="/">Home</Link>
+            </li>
+            <li>
+              <Link to="/account">Account</Link>
+            </li>
+            <li>
+              <Link to="/account/predictions">My Predictions</Link>
+            </li>
+            <li>
+              <Link to="/stats/nfl/team">NFL Team Stats</Link>
+            </li>
+            <li>
+              <Link
+                className="logout"
+                to="/login"
+                onClick={() => localStorage.clear()}
+              >
+                Logout
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
       <Routes>
         <Route
           path="/"
@@ -53,7 +63,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/nfl-team-stats" element={<NFLStatsChart />} />
+        <Route
+          path="/stats/nfl/team"
+          element={
+            <ProtectedRoute>
+              <NFLStatsChart />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/account/predictions"
           element={
@@ -75,7 +92,7 @@ function App() {
         <Route path="register" element={<RegisterAndLogout />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 

@@ -24,11 +24,6 @@ def user_info(request):
             "Authentication credentials were not provided."
         }, status=401)
     
-def get_nfl_team_stats(request):
-    stats = NFLTeamStats.objects.all().values()
-    return JsonResponse(list(stats), safe=False)
-    
-# Create your views here.
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer

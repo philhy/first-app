@@ -38,7 +38,7 @@ const NFLStatsChart = () => {
 
   const fetchNFLData = () => {
     api
-      .get("/api/nfl-team-stats")
+      .get("/stats/nfl/team")
       .then((res) => {
         setTeamStats(res.data);
       })
@@ -102,6 +102,7 @@ const NFLStatsChart = () => {
   }, [selectedTeams, selectedCategories]);
 
   const excludeKeys = ["team", "id", "season", "week", "record"]
+
   return (
     <div>
       <h2>NFL Team Stats</h2>
