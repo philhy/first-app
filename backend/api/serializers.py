@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Prediction
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,3 +20,8 @@ class PredictionSerializer(serializers.ModelSerializer):
         model = Prediction
         fields = ['id', 'title', 'category', 'content', 'created_at', 'author', 'author_username']
         extra_kwargs = {'author': {'read_only': True}}
+
+class NFLTeamStatsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NFLTeamStats
+        fields = '__all__'
