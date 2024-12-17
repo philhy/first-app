@@ -57,7 +57,11 @@ const NFLStatsChart = () => {
       selectedOptions,
       (option) => option.value
     );
-    setSelectedTeams([...new Set(selectedValues)]);
+    if (selectedValues.includes("All")) {
+      setSelectedTeams(["All"]);
+    } else {
+      setSelectedTeams([...new Set(selectedValues)]);
+    }
   };
 
   const handleCategoryChange = (e) => {
@@ -69,12 +73,38 @@ const NFLStatsChart = () => {
   };
 
   const prepareChartData = () => {
-    const filteredData = teamStats.filter(
-      (item) =>
-        selectedTeams.includes(item.team) &&
-        item.week === Number(selectedWeek) &&
-        item.season === Number(selectedSeason)
-    );
+    let filteredData;
+
+    if (selectedWeek === "All") {
+      filteredData = teamStats
+        .filter((item) => (selectedTeams.includes("All") || selectedTeams.includes(item.team)) && Number(item.season) === Number(selectedSeason))
+        .reduce((acc, curr) => {
+          const teamIndex = acc.findIndex((el) => el.team === curr.team);
+          if (teamIndex > -1) {
+            selectedCategories.forEach((category) => {
+              acc[teamIndex][category] =
+                (acc[teamIndex][category] || 0) + Number(curr[category] || 0);
+            });
+          } else {
+            const newEntry = { team: curr.team };
+            selectedCategories.forEach((category) => {
+              newEntry[category] = Number(curr[category] || 0);
+            });
+            acc.push(newEntry);
+          }
+          return acc;
+        }, []);
+    } else {
+      filteredData = teamStats.filter(
+        (item) =>
+          (selectedTeams.includes("All") ||
+            selectedTeams.includes(item.team)) &&
+          Number(item.week) === Number(selectedWeek) &&
+          Number(item.season) === Number(selectedSeason)
+      );
+    }
+
+    console.log(filteredData);
 
     const labels = filteredData.map((item) => item.team);
 
@@ -96,7 +126,8 @@ const NFLStatsChart = () => {
       tension: 0.25,
       fill: selectedCategories.length === 1,
       barThickness: 30,
-      hoverBackgroundColor: "rgba(75, 192, 192, 1)",
+      hoverBackgroundColor: "rgba(34, 40, 58, 1)",
+      hoverBorderColor: "rgba(34, 40, 58, 1)",
     }));
 
     setChartData({ labels, datasets });
@@ -106,9 +137,11 @@ const NFLStatsChart = () => {
     if (selectedTeams.length && selectedCategories.length) {
       prepareChartData();
     }
-  }, [selectedTeams, selectedCategories]);
+  }, [selectedSeason, selectedWeek, selectedTeams, selectedCategories]);
 
-  const weeks = [...new Set(teamStats.map((item) => item.week))];
+  const weeks = [...new Set(teamStats.map((item) => item.week))].sort(
+    (a, b) => Number(a) - Number(b)
+  );
   const seasons = [...new Set(teamStats.map((item) => item.season))];
   const uniqueTeams = [...new Set(teamStats.map((item) => item.team))];
 
@@ -139,6 +172,7 @@ const NFLStatsChart = () => {
           onChange={(e) => setSelectedWeek(e.target.value)}
           style={{ width: "200px", height: "20px" }}
         >
+          <option value="All">All Weeks</option>
           {weeks.map((week) => (
             <option key={week} value={week}>
               {week}
@@ -154,6 +188,7 @@ const NFLStatsChart = () => {
           onChange={handleTeamChange}
           style={{ width: "200px", height: "100px" }}
         >
+          <option value="All">All Teams</option>
           {uniqueTeams.map((team) => (
             <option key={team} value={team}>
               {team}
@@ -181,7 +216,8 @@ const NFLStatsChart = () => {
         </select>
       </div>
       {chartData && chartData.labels && chartData.datasets.length > 0 ? (
-        selectedTeams.length === 1 ? (
+        selectedTeams.length === 1 &&
+        selectedTeams.includes("All") === false ? (
           <Bar data={chartData} />
         ) : (
           <Line data={chartData} />
