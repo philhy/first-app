@@ -118,7 +118,8 @@ def inputTeamData(df):
             losses=df.losses.iat[i],
             ties=df.ties.iat[i],
             win_pct=df.win_pct.iat[i],
-            yps=df.yps.iat[i]
+            yps=df.yps.iat[i],
+            game_date=df.game_date.iat[i]
         ))
 
     return data
@@ -126,6 +127,8 @@ def inputTeamData(df):
 pbp = importData('pbp', [2012, 2023])
 
 pbp = pbp[pbp.season_type == 'REG']
+
+pbp.game_date = pd.to_datetime(pbp.game_date)
 
 pbp_filtered = pbp[pbp.play_type.isin(['pass', 'run'])].sort_values(by=['season'])
 
@@ -238,7 +241,7 @@ comb_df['receptions'] = comb_df.complete_pass
 comb_df['targets'] = comb_df.pass_attempts
 
 comb_df = comb_df[[
-    'team', 'season', 'week', 'total_snaps', 'yards_gained', 'touchdown', 'extra_point_attempt', 'field_goal_attempt', 'total_points',
+    'team', 'season', 'week', 'game_date', 'total_snaps', 'yards_gained', 'touchdown', 'extra_point_attempt', 'field_goal_attempt', 'total_points',
     'td_points', 'xp_points', 'fg_points', 'fumble', 'fumble_lost', 'shotgun', 'no_huddle', 'qb_dropback', 'pass_snaps_count',
     'pass_snaps_pct', 'pass_attempts', 'complete_pass', 'incomplete_pass', 'air_yards', 'passing_yards', 'pass_td', 'interception',
     'targets', 'receptions', 'receiving_yards', 'yards_after_catch', 'receiving_td', 'pass_fumble', 'pass_fumble_lost',

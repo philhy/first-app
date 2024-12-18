@@ -53,3 +53,4 @@ class NFLTeamStats(models.Model):
     win_pct = models.FloatField()
     record = models.CharField(max_length=50, null=True, blank=True)
     yps = models.FloatField()
+    game_date = models.DateField(null=True, blank=True)
