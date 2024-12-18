@@ -145,7 +145,7 @@ const NFLStatsChart = () => {
   const seasons = [...new Set(teamStats.map((item) => item.season))];
   const uniqueTeams = [...new Set(teamStats.map((item) => item.team))];
 
-  const excludeKeys = ["team", "id", "season", "week", "record"];
+  const excludeKeys = ["team", "id", "season", "week", "record", "game_date"];
 
   return (
     <div>

@@ -22,6 +22,21 @@ def importData(data, years):
     def getData(i, data=data):
         if 'pbp' in data:
             imported_data = nfl.import_pbp_data([i])
+        elif 'schedules' in data:
+            imported_data = nfl.import_schedules([i])
+        elif 'draft' in data and 'picks' in data:
+            imported_data = nfl.import_draft_picks([i])
+        elif 'combine' in data:
+            imported_data = nfl.import_combine_data([i])
+        elif 'depth charts' in data:
+            imported_data = nfl.import_depth_charts([i])
+        elif 'snaps' in data:
+            imported_data = nfl.import_snap_counts([i])
+        elif 'injuries' in data:
+            imported_data = nfl.import_injuries([i])
+        elif 'ids' in data:
+            imported_data = nfl.import_ids([i])
+
         return imported_data
     
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -124,137 +139,138 @@ def inputTeamData(df):
 
     return data
 
-pbp = importData('pbp', [2012, 2023])
+if __name__ == '__main__':
+    pbp = importData('pbp', [2012, 2023])
 
-pbp = pbp[pbp.season_type == 'REG']
+    pbp = pbp[pbp.season_type == 'REG']
 
-pbp.game_date = pd.to_datetime(pbp.game_date)
+    pbp.game_date = pd.to_datetime(pbp.game_date)
 
-pbp_filtered = pbp[pbp.play_type.isin(['pass', 'run'])].sort_values(by=['season'])
+    pbp_filtered = pbp[pbp.play_type.isin(['pass', 'run'])].sort_values(by=['season'])
 
-print('Getting team data')
-team_data = pbp_filtered.groupby(['posteam', 'season', 'week', 'play_type']).size().unstack(fill_value=0).reset_index()
+    print('Getting team data')
+    team_data = pbp_filtered.groupby(['posteam', 'season', 'week', 'game_date', 'play_type']).size().unstack(fill_value=0).reset_index()
 
-team_data['total_snaps'] = team_data['pass'] + team_data['run']
-team_data = team_data.rename(columns={
-    'posteam': 'team',
-    'pass': 'pass_snaps_count',
-    'run': 'rush_snaps_count'
-})
+    team_data['total_snaps'] = team_data['pass'] + team_data['run']
+    team_data = team_data.rename(columns={
+        'posteam': 'team',
+        'pass': 'pass_snaps_count',
+        'run': 'rush_snaps_count'
+    })
 
-team_data['pass_snaps_pct'] = round(team_data.pass_snaps_count / team_data.total_snaps, 2)
-team_data['rush_snaps_pct'] = round(team_data.rush_snaps_count / team_data.total_snaps, 2)
+    team_data['pass_snaps_pct'] = round(team_data.pass_snaps_count / team_data.total_snaps, 2)
+    team_data['rush_snaps_pct'] = round(team_data.rush_snaps_count / team_data.total_snaps, 2)
 
-sum_data = pbp[pbp.play_type.isin(['run', 'pass'])][[
-     'posteam',
-     'season',
-     'week',
-     'touchdown',
-     'yards_gained',
-     'shotgun',
-     'no_huddle',
-     'qb_dropback',
-     'qb_scramble',
-     'pass_length',
-     'pass_location',
-     'air_yards',
-     'yards_after_catch',
-     'posteam_score_post',
-     'defteam_score_post',
-     'score_differential_post',
-     'incomplete_pass',
-     'interception',
-     'fumble_lost',
-     'fumble',
-     'complete_pass',
-     'passer_player_name',
-     'passing_yards',
-     'receiver_player_id',
-     'receiver_player_name',
-     'receiving_yards',
-     'rusher_player_id',
-     'rusher_player_name',
-     'rushing_yards',
-     'series_result',
-     'play_type',
-     'play_type_nfl',
-     'passer'
-]]
+    sum_data = pbp[pbp.play_type.isin(['run', 'pass'])][[
+        'posteam',
+        'season',
+        'week',
+        'touchdown',
+        'yards_gained',
+        'shotgun',
+        'no_huddle',
+        'qb_dropback',
+        'qb_scramble',
+        'pass_length',
+        'pass_location',
+        'air_yards',
+        'yards_after_catch',
+        'posteam_score_post',
+        'defteam_score_post',
+        'score_differential_post',
+        'incomplete_pass',
+        'interception',
+        'fumble_lost',
+        'fumble',
+        'complete_pass',
+        'passer_player_name',
+        'passing_yards',
+        'receiver_player_id',
+        'receiver_player_name',
+        'receiving_yards',
+        'rusher_player_id',
+        'rusher_player_name',
+        'rushing_yards',
+        'series_result',
+        'play_type',
+        'play_type_nfl',
+        'passer'
+    ]]
 
-print('Getting rushing stats')
-rushing_stats = sumData(sum_data, 'run')
+    print('Getting rushing stats')
+    rushing_stats = sumData(sum_data, 'run')
 
-print('Getting passing stats')
-passing_stats = sumData(sum_data, 'pass')
-passing_stats['receiving_td'] = passing_stats.pass_td
+    print('Getting passing stats')
+    passing_stats = sumData(sum_data, 'pass')
+    passing_stats['receiving_td'] = passing_stats.pass_td
 
-print('Getting team stats')
-team_stats = sumData(sum_data)
-team_stats['pass_attempts'] = team_stats.incomplete_pass + team_stats.complete_pass
-team_stats = team_stats.rename(columns={'posteam': 'team'})
-team_stats = pd.merge(team_stats, rushing_stats[['team', 'season', 'week', 'run_fumble_lost', 'run_fumble', 'run_td']], on=['team', 'season', 'week'])
-team_stats = pd.merge(team_stats, passing_stats[['team', 'season', 'week', 'pass_fumble_lost', 'pass_fumble', 'pass_td', 'receiving_td']], on=['team', 'season', 'week'])
-team_stats['yards_gained'] = team_stats.yards_gained + team_stats.receiving_yards
+    print('Getting team stats')
+    team_stats = sumData(sum_data)
+    team_stats['pass_attempts'] = team_stats.incomplete_pass + team_stats.complete_pass
+    team_stats = team_stats.rename(columns={'posteam': 'team'})
+    team_stats = pd.merge(team_stats, rushing_stats[['team', 'season', 'week', 'run_fumble_lost', 'run_fumble', 'run_td']], on=['team', 'season', 'week'])
+    team_stats = pd.merge(team_stats, passing_stats[['team', 'season', 'week', 'pass_fumble_lost', 'pass_fumble', 'pass_td', 'receiving_td']], on=['team', 'season', 'week'])
+    team_stats['yards_gained'] = team_stats.yards_gained + team_stats.receiving_yards
 
-print('Getting points stats')
-points = pbp[(pbp.touchdown == 1) | ((pbp.extra_point_attempt == 1) & (pbp.success == 1)) | ((pbp.field_goal_attempt == 1) & (pbp.success == 1))]
-points = points.groupby(['posteam', 'season', 'week']).agg({
-    'touchdown': 'sum',
-    'extra_point_attempt': 'sum',
-    'field_goal_attempt': 'sum'
-}).reset_index()
-points.loc[:, 'td_points'] = points.apply(lambda row: row['touchdown'] * 6, axis=1)
-points.loc[:, 'xp_points'] = points.apply(lambda row: row['extra_point_attempt'], axis=1)
-points.loc[:, 'fg_points'] = points.apply(lambda row: row['field_goal_attempt'] * 3, axis=1)
-points['total_points'] = points['td_points'] + points['xp_points'] + points['fg_points']
-points = points.rename(columns={'posteam': 'team'})
+    print('Getting points stats')
+    points = pbp[(pbp.touchdown == 1) | ((pbp.extra_point_attempt == 1) & (pbp.success == 1)) | ((pbp.field_goal_attempt == 1) & (pbp.success == 1))]
+    points = points.groupby(['posteam', 'season', 'week']).agg({
+        'touchdown': 'sum',
+        'extra_point_attempt': 'sum',
+        'field_goal_attempt': 'sum'
+    }).reset_index()
+    points.loc[:, 'td_points'] = points.apply(lambda row: row['touchdown'] * 6, axis=1)
+    points.loc[:, 'xp_points'] = points.apply(lambda row: row['extra_point_attempt'], axis=1)
+    points.loc[:, 'fg_points'] = points.apply(lambda row: row['field_goal_attempt'] * 3, axis=1)
+    points['total_points'] = points['td_points'] + points['xp_points'] + points['fg_points']
+    points = points.rename(columns={'posteam': 'team'})
 
-print('Getting win-loss stats')
-pbp.loc[:, 'winner'] = pbp.apply(lambda row: 'TIE' if row['total_home_score'] == row['total_away_score'] else row['home_team'] if row['total_home_score'] > row['total_away_score'] else row['away_team'], axis=1)
-pbp.loc[pbp.play_type_nfl != 'END_GAME', 'winner'] = np.nan
-pbp.winner = pbp.winner.fillna(method='bfill')
-games = pbp.drop_duplicates(subset='game_id')
+    print('Getting win-loss stats')
+    pbp.loc[:, 'winner'] = pbp.apply(lambda row: 'TIE' if row['total_home_score'] == row['total_away_score'] else row['home_team'] if row['total_home_score'] > row['total_away_score'] else row['away_team'], axis=1)
+    pbp.loc[pbp.play_type_nfl != 'END_GAME', 'winner'] = np.nan
+    pbp.winner = pbp.winner.fillna(method='bfill')
+    games = pbp.drop_duplicates(subset='game_id')
 
-away_wins = games.groupby(['away_team', 'season', 'week']).apply(winLossTotal, 'away').reset_index()
-away_wins = away_wins.rename(columns={'away_team': 'team'})
-home_wins = games.groupby(['home_team', 'season', 'week']).apply(winLossTotal, 'home').reset_index()
-home_wins = home_wins.rename(columns={'home_team': 'team'})
-wins = pd.concat([home_wins, away_wins]).sort_values(by=['team', 'season', 'week']).fillna(0)
+    away_wins = games.groupby(['away_team', 'season', 'week']).apply(winLossTotal, 'away').reset_index()
+    away_wins = away_wins.rename(columns={'away_team': 'team'})
+    home_wins = games.groupby(['home_team', 'season', 'week']).apply(winLossTotal, 'home').reset_index()
+    home_wins = home_wins.rename(columns={'home_team': 'team'})
+    wins = pd.concat([home_wins, away_wins]).sort_values(by=['team', 'season', 'week']).fillna(0)
 
-for i in ['wins', 'losses', 'ties']:
-    wins.loc[:, i] = 0
-    wins.loc[:, i] = wins.apply(lambda row: int(row[f'home_{i}']) + int(row[f'away_{i}']), axis=1)
-    wins.loc[:, i] = wins.apply(lambda row: row[i] if row['week'] == 1 else wins[
-        (wins.week < row['week']) & (wins.season == row['season']) & (wins.team == row['team'])
-    ][i].sum() + (row[f'home_{i}'] + row[f'away_{i}']), axis=1)
+    for i in ['wins', 'losses', 'ties']:
+        wins.loc[:, i] = 0
+        wins.loc[:, i] = wins.apply(lambda row: int(row[f'home_{i}']) + int(row[f'away_{i}']), axis=1)
+        wins.loc[:, i] = wins.apply(lambda row: row[i] if row['week'] == 1 else wins[
+            (wins.week < row['week']) & (wins.season == row['season']) & (wins.team == row['team'])
+        ][i].sum() + (row[f'home_{i}'] + row[f'away_{i}']), axis=1)
 
-wins.loc[:, 'record'] = wins.apply(lambda row: f"{int(row['wins'])}-{int(row['losses'])}-{int(row['ties'])}", axis=1)
-wins.loc[:, 'win_pct'] = wins.apply(lambda row: round(row['wins'] / (row['wins']+row['losses']+row['ties']), 3), axis=1)
+    wins.loc[:, 'record'] = wins.apply(lambda row: f"{int(row['wins'])}-{int(row['losses'])}-{int(row['ties'])}", axis=1)
+    wins.loc[:, 'win_pct'] = wins.apply(lambda row: round(row['wins'] / (row['wins']+row['losses']+row['ties']), 3), axis=1)
 
-print('Combining DataFrames')
-comb_df = pd.merge(team_data, points, on=['team', 'season', 'week'])
-comb_df = pd.merge(comb_df, team_stats, on=['team', 'season', 'week'])
-comb_df = pd.merge(comb_df, wins[[
-    'team', 'season', 'week', 'wins', 'losses', 'ties', 'win_pct'
-]].sort_values(by=['team', 'season', 'week']))
-comb_df['receptions'] = comb_df.complete_pass
-comb_df['targets'] = comb_df.pass_attempts
+    print('Combining DataFrames')
+    comb_df = pd.merge(team_data, points, on=['team', 'season', 'week'])
+    comb_df = pd.merge(comb_df, team_stats, on=['team', 'season', 'week'])
+    comb_df = pd.merge(comb_df, wins[[
+        'team', 'season', 'week', 'wins', 'losses', 'ties', 'win_pct'
+    ]].sort_values(by=['team', 'season', 'week']))
+    comb_df['receptions'] = comb_df.complete_pass
+    comb_df['targets'] = comb_df.pass_attempts
 
-comb_df = comb_df[[
-    'team', 'season', 'week', 'game_date', 'total_snaps', 'yards_gained', 'touchdown', 'extra_point_attempt', 'field_goal_attempt', 'total_points',
-    'td_points', 'xp_points', 'fg_points', 'fumble', 'fumble_lost', 'shotgun', 'no_huddle', 'qb_dropback', 'pass_snaps_count',
-    'pass_snaps_pct', 'pass_attempts', 'complete_pass', 'incomplete_pass', 'air_yards', 'passing_yards', 'pass_td', 'interception',
-    'targets', 'receptions', 'receiving_yards', 'yards_after_catch', 'receiving_td', 'pass_fumble', 'pass_fumble_lost',
-    'rush_snaps_count', 'rush_snaps_pct', 'qb_scramble', 'rushing_yards', 'run_td', 'run_fumble', 'run_fumble_lost', 
-    'wins', 'losses', 'ties', 'win_pct'
-]]
-comb_df.drop_duplicates(inplace=True)
-comb_df['yps'] = round(comb_df.yards_gained / comb_df.total_snaps, 2)
+    comb_df = comb_df[[
+        'team', 'season', 'week', 'game_date', 'total_snaps', 'yards_gained', 'touchdown', 'extra_point_attempt', 'field_goal_attempt', 'total_points',
+        'td_points', 'xp_points', 'fg_points', 'fumble', 'fumble_lost', 'shotgun', 'no_huddle', 'qb_dropback', 'pass_snaps_count',
+        'pass_snaps_pct', 'pass_attempts', 'complete_pass', 'incomplete_pass', 'air_yards', 'passing_yards', 'pass_td', 'interception',
+        'targets', 'receptions', 'receiving_yards', 'yards_after_catch', 'receiving_td', 'pass_fumble', 'pass_fumble_lost',
+        'rush_snaps_count', 'rush_snaps_pct', 'qb_scramble', 'rushing_yards', 'run_td', 'run_fumble', 'run_fumble_lost', 
+        'wins', 'losses', 'ties', 'win_pct'
+    ]]
+    comb_df.drop_duplicates(inplace=True)
+    comb_df['yps'] = round(comb_df.yards_gained / comb_df.total_snaps, 2)
 
-data = inputTeamData(comb_df)
-NFLTeamStats.objects.bulk_create(data)
+    data = inputTeamData(comb_df)
+    NFLTeamStats.objects.bulk_create(data)
 
-print(f"Successfully inserted {len(comb_df)} random records into the NFLTeamStats model!")
+    print(f"Successfully inserted {len(comb_df)} random records into the NFLTeamStats model!")
 
 # # Teams list for random selection
 # teams = [
